@@ -1,16 +1,23 @@
+import matplotlib
+matplotlib.use('TKAgg')
+
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
 import sys
 
+import matplotlib.animation as anim
+
+
 def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energies'):
     acc = 0
     energies = []
     time = []
+    ms = []
 
-    efile = efile+'T'+str(T)+'_model_'+model+'.txt'
+    efile = efile+'T'+str(T)+'_model_'+model+'.dat'
     efile = open(efile,'w')
-    efile.write('Time-step\tEnergy\n')
+    efile.write('Time-step\tEnergy\tMagnetisation\n')
     
     
     spins = np.zeros((size,size))
@@ -24,16 +31,39 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
             else:
                 spins[i,j] = -1
     print(spins)
-    
+
+    #Initialise figure
+    fig = plt.figure()
+    im = plt.imshow(spins,animated=True)
+        
     newspins = spins.copy()
 
     for st in range(nsteps):
         if(np.mod(st,10)==0):
             print('sweep no.: '+str(st))
+            #Output observables
             en = E(spins,J)
+            m = np.sum(spins)
             energies.append(en)
             time.append(st)
-            efile.write(str(st)+'\t'+str(en)+'\n')
+            ms.append(m)
+            efile.write(str(st)+'\t'+str(en)+'\t'+str(m)+'\n')
+
+            
+            #Show animation
+            
+            f = open('spins.dat','w')
+            for i in range(r):
+                for j in range(c):
+                    f.write('%d %d %lf\n'%(i,j,spins[i,j]))
+
+            f.close()
+            #show anim
+            plt.cla()
+            im = plt.imshow(spins, animated = True)
+            plt.draw()
+            plt.pause(0.0001)
+            
         
         for sweep in range(size*size):
         #size*size flips each time step, each flip is random
@@ -41,8 +71,10 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
             #calc proposed change:
             if model == 'g':
                 dE,newspins = glauber(spins,J)
-            else:
+            elif model == 'k':
                 dE,newspins = kawasaki(spins,J)
+            else:
+                print('model not recognised, please try again and enter \'k\' for kawasaki and \'g\' for glauber')
 
             #metropolis check
             if(metropolis(dE,T)):
@@ -59,7 +91,7 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
     print('T = '+str(T)+' completed')   
     #print('acc rate: '+str(100*acc/(nsteps*size*size)))
     
-    return
+    return energies,time,ms
 
 def E(spins,J):
     E = 0
