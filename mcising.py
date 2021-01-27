@@ -15,10 +15,11 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
     time = []
     ms = []
 
-    efile = efile+'T'+str(T)+'_model_'+model+'.dat'
+    '''
+    efile = efile+'T'+str(np.round(T,decimals = 1))+'_model_'+model+'.dat'
     efile = open(efile,'w')
-    efile.write('Time-step\tEnergy\tMagnetisation\n')
-    
+    efile.write('Time-step\tEnergy\tMagnetisation\n')   
+    '''
     
     spins = np.zeros((size,size))
     (r,c) = spins.shape
@@ -33,8 +34,8 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
     print(spins)
 
     #Initialise figure
-    fig = plt.figure()
-    im = plt.imshow(spins,animated=True)
+    #fig = plt.figure()
+    #im = plt.imshow(spins,animated=True)
         
     newspins = spins.copy()
 
@@ -43,15 +44,15 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
             print('sweep no.: '+str(st))
             #Output observables
             en = E(spins,J)
-            m = np.sum(spins)
+            #m = np.sum(spins)
             energies.append(en)
             time.append(st)
-            ms.append(m)
-            efile.write(str(st)+'\t'+str(en)+'\t'+str(m)+'\n')
+            #ms.append(m)
+            #efile.write(str(st)+'\t'+str(en)+'\t'+str(m)+'\n')
 
             
             #Show animation
-            
+            '''
             f = open('spins.dat','w')
             for i in range(r):
                 for j in range(c):
@@ -63,7 +64,7 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
             im = plt.imshow(spins, animated = True)
             plt.draw()
             plt.pause(0.0001)
-            
+            '''
         
         for sweep in range(size*size):
         #size*size flips each time step, each flip is random
@@ -81,17 +82,36 @@ def main(model = 'g',nsteps = 10000, J = 1.0, size = 50, T = 1.0,efile = 'energi
                 spins = newspins.copy()
                 acc = acc+1
 
+
+    efile = efile+'T'+str(np.round(T,decimals = 1))+'_model_'+model+'.dat'
+    efile = open(efile,'w')
+    efile.write('Time-step\tEnergy\tMagnetisation\n')   
+    
+    for i in range(len(time)):
+        efile.write(str(time[i])+'\t'+str(energies[i])#+'\t'+str(ms[i])
+                    +'\n')
     efile.close()
+
     plt.cla()
     plt.plot(time, energies)
     plt.xlabel('Time-steps')
     plt.ylabel('Total Energy')
+    plt.savefig('plot_T'+str(np.round(T,decimals = 1))+'_energies_model_'+model+'.png')
+
+    print('T = '+str(T)+' completed')
     
-    plt.savefig('plot_T'+str(T)+'_energies.png')
-    print('T = '+str(T)+' completed')   
+        
     #print('acc rate: '+str(100*acc/(nsteps*size*size)))
     
     return energies,time,ms
+
+def run(model,start=1.0, end=3.1, step=0.1):
+    for T in np.arange(start,end, step):
+        main(model = model, T = T)
+
+    print('Complete')
+
+    return
 
 def E(spins,J):
     E = 0
