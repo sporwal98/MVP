@@ -10,7 +10,20 @@ import matplotlib.animation as anim
 
 
 def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile = 'energies'):
+    #main simulation code
+    '''
+    Inputs
+    model = 'g' for Glauber, 'k' for Kawasaki
+    ini = '' for default initialisation, spin matrix for carry on from previous run
+    J = Scale value for energy contribution of single spin
+    size = no. of spins in one dimension of square spin matrix
+    T = Scaled Temperature of system
+    efile = Base name of file to store energy, magnetisation per time-step
 
+    Output:
+    spins = The spin matrix at the end of execution
+    '''
+    
     if(model not in ['g','k']):
             print('Invalid model, please set model = \'g\' for glauber and \'k\' for kawasaki')
             return
@@ -20,14 +33,16 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
     time = []
     ms = []
 
-     
-    
+    #Initialising spins
     spins = np.zeros((size,size))
     (r,c) = spins.shape
     if(ini ==''):
+        #Default initialisation
         if(model == 'g'):
+            #Glauber: Setting all elements to 1(up spin)
             spins = np.ones((size,size))
         elif(model =='k'):
+            #Kawasaki: Creating equal number of up and down spins
             for i in range(0,r):
                 for j in range(0,c):
                     if(np.mod(i+j,2)==0):
@@ -36,22 +51,22 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
                         spins[i,j] = -1
         print(spins)
     else:
+        #Continuous initialisation: when a spin matrix is passed to the ini parameter, use the input as initial matrix
         spins = ini
 
-    #Initialise figure
-    #fig = plt.figure()
-    #im = plt.imshow(spins,animated=True)
+    #Initialise figure for animation
+    fig = plt.figure()
+    im = plt.imshow(spins,animated=True)
         
     newspins = ''
-
-    st = 0
-
+    
+    st = 0 
     while st<=nsteps:
+        #The main time-step loop
         if(np.mod(st,10)==0):
             print('sweep no.: '+str(st))
-            #Output observables
+            #Calculating observables: Energy, Magnetisation
             en = E(spins,J)
-            
             energies.append(en)
             time.append(st)
             if(model =='g'):
@@ -61,24 +76,20 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
 
             
             #Show animation
-            '''
             f = open('spins.dat','w')
             for i in range(r):
                 for j in range(c):
                     f.write('%d %d %lf\n'%(i,j,spins[i,j]))
-
             f.close()
             plt.cla()
             im = plt.imshow(spins, animated = True)
             plt.draw()
             plt.pause(0.001)
-            '''
     
             
         sweep = 0
         while sweep<(size*size):
-        #size*size flips each time step, each flip is random
-            
+        #size*size iterations each time step, each iteration is on random indices
             dE = 0
             f = 1
             #calc proposed change:
@@ -87,6 +98,7 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
             elif model == 'k':
                 dE,newspins = kawasaki(spins,J)
                 if(dE == 0):
+                    #When no change in system
                     sweep = sweep-1
                     f = 0
             #metropolis check
@@ -100,17 +112,20 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
         st = st+1
 
 
+    #Creating file to store observables
     efile = efile+'T'+str(np.round(T,decimals = 1))+'_model_'+model+'.dat'
     efile = open(efile,'w')
     efile.write('Time-step\tEnergy\tMagnetisation\n')   
     
     for i in range(len(time)):
+        #Writing observables to file
         if(model =='g'):
             efile.write(str(time[i])+'\t'+str(energies[i])+'\t'+str(ms[i])+'\n')
         else:
             efile.write(str(time[i])+'\t'+str(energies[i])+'\n')
     efile.close()
 
+    #Plotting Total Energy vs Time-Step
     plt.cla()
     plt.plot(time, energies)
     plt.xlabel('Time-steps')
@@ -122,6 +137,15 @@ def main(model = 'g',ini = '',nsteps = 10000, J = 1.0, size= 50, T = 1.0,efile =
     return spins
 
 def run(model,start=1.0, end=3.1, step=0.1, size = 50):
+    #Running simulation for range of temperatures
+    '''
+    Inputs:
+    model = same as main()
+    start = Temperature to start running simulations
+    end = Temperature upper limit
+    step = Step-size in Temperature
+    size = Side of square spins matrix
+    '''
     spins = ''
     for T in np.arange(start,end, step):
         spins = main(model = model,ini = spins, T = T)
@@ -130,10 +154,16 @@ def run(model,start=1.0, end=3.1, step=0.1, size = 50):
     return
 
 def E(spins,J):
+    #Calculate Total Energy of spins matrix
+    '''
+    Inputs:
+    spins,J = same as in main()
+    '''
     E = 0
     (r,c) = spins.shape
     for i in range(r):
         for j in range(c):
+            #Adding the contribution of each spin, dividing by 2 to compensate for double counting
             E = E + Eij(spins,i,j,J)/2
     return E
 
@@ -206,11 +236,12 @@ def kawasaki(spins,J):
 
         return dE,newspins
 
-def metropolis(dE,T):
+def metropolis(dE,T,kB = 1.0):
     #metropolis condition to accept or reject proposed change
     
     flag = False
-    kB = 1.0
+
+    #Metropolis factor
     metfac = np.exp(-dE/(kB*T))
     if(metfac<1):
         ran = np.random.random()
