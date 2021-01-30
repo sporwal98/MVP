@@ -10,17 +10,20 @@ def main(model):
     avgms = []
     sphs = []
     sus = []
+    
+    
 
+    
     for i in range(len(Ts)):
         fname = 'energiesT'+str(Ts[i])+'_model_'+model+'.dat'
         df = pd.read_table(fname)
         dfs.append(df)
 
-        avgens.append(np.mean((df['Energy'])[500:]))
-        sphs.append(specific_heat((df['Energy'])[500:],Ts[i]))
+        avgens.append(np.mean( (df['Energy'])[100:] ))
+        sphs.append(specific_heat((df['Energy'])[100:],Ts[i]))
         if(model =='g'):
-            avgms.append(np.mean((df['Magnetisation'])[500:]))
-            sus.append(susceptibility((df['Magnetisation'])[500:],Ts[i]))
+            avgms.append(np.mean((df['Magnetisation'])[100:]))
+            sus.append(susceptibility((df['Magnetisation'])[100:],Ts[i]))
         
 
     print(sus[:10])
@@ -36,7 +39,7 @@ def main(model):
 
     if(model == 'g'):
         plt.cla()
-        plt.plot(Ts,avgms)
+        plt.plot(Ts,np.abs(avgms))
         plt.xlabel('T')
         plt.ylabel('Average Magnetisation')
         plt.title('Avg Magnetisation vs T')
@@ -58,10 +61,24 @@ def main(model):
     plt.title('Specific Heat vs T')
     #plt.show()
     plt.savefig('CvT_'+model+'.png')
+    
+    file = 'observables_'+model+'.dat'
+    file = open(file,'w')
+    file.write('E\tC\tM\tS\n')
+    for i in range(len(Ts)):
+        if model =='g':
+            file.write(str(avgens[i])+'\t'+
+                       str(sphs[i])+'\t'+
+                       str(avgms[i])+'\t'+
+                       str(sus[i])+'\n')
+        else:
+            file.write(str(avgens[i])+'\t'+
+                       str(sphs[i])+'\n')
 
+    file.close()
     return
 
-def susceptibility(mags,T,N=2500, kB = 1):
+def susceptibility(mags,T,N=2500, kB = 1.0):
     sus = (np.mean(mags**2)-np.mean(mags)**2)/(N*kB*T)
     return sus
 
